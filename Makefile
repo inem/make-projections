@@ -29,6 +29,32 @@ projection:
 			fi; \
 		done
 
+tree-projection:
+	@if [ -z "$(ARGS)" ]; then \
+		echo "Usage: make projection-tree <integration_name>"; \
+		exit 1; \
+	fi
+	@mkdir -p $(PROJECTIONS_DIR)/$(ARGS)
+	@find $(PWD) -type f \( -name "*$(ARGS)*" -o -name "*$(shell echo $(ARGS) | sed 's/.*/\u&/')*" \) \
+		-not -path "*/node_modules/*" \
+		-not -path "*/.git/*" \
+		-not -path "*/tmp/*" \
+		-not -path "*/log/*" \
+		-not -path "*/$(PROJECTIONS_DIR)/*" \
+		| while read file; do \
+			rel_path=$${file#$(PWD)/}; \
+			target_dir=$(PROJECTIONS_DIR)/$(ARGS)/$$(dirname $$rel_path); \
+			mkdir -p $$target_dir; \
+			target_file=$$target_dir/$$(basename $$file); \
+			if [ ! -e $$target_file ]; then \
+				ln -s $$file $$target_file; \
+				echo "Created symlink for $$file"; \
+			else \
+				echo "Symlink already exists for $$file"; \
+			fi; \
+		done
+
+
 clean-projection:
 	@if [ -z "$(ARGS)" ]; then \
 		echo "Usage: make clean-projection <integration_name>"; \
