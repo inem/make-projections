@@ -5,22 +5,23 @@ ARGS = $(filter-out $@,$(MAKECMDGOALS))
 %:
 	@:
 
-.PHONY: projection clean-projection clean-projection! list-files
+.PHONY: projection projection-tree clean-projection clean-projection! list-files
 
 projection:
 	@if [ -z "$(ARGS)" ]; then \
-		echo "Usage: make projection <integration_name>"; \
+		echo "Usage: make projection <integration_name> [skip=dir1,dir2,...]"; \
 		exit 1; \
 	fi
-	@mkdir -p $(PROJECTIONS_DIR)/$(ARGS)
-	@find $(PWD) -type f \( -name "*$(ARGS)*" -o -name "*$(shell echo $(ARGS) | sed 's/.*/\u&/')*" \) \
+	@mkdir -p $(PROJECTIONS_DIR)/$(word 1,$(ARGS))
+	@find $(PWD) -type f \( -name "*$(word 1,$(ARGS))*" -o -name "*$(shell echo $(word 1,$(ARGS)) | sed 's/.*/\u&/')*" \) \
 		-not -path "*/node_modules/*" \
 		-not -path "*/.git/*" \
 		-not -path "*/tmp/*" \
 		-not -path "*/log/*" \
 		-not -path "*/$(PROJECTIONS_DIR)/*" \
+		$(if $(skip),$(foreach dir,$(subst $(comma),$(space),$(skip)),-not -path "*/$(dir)/*")) \
 		| while read file; do \
-			target_file=$(PROJECTIONS_DIR)/$(ARGS)/$$(basename $$file); \
+			target_file=$(PROJECTIONS_DIR)/$(word 1,$(ARGS))/$$(basename $$file); \
 			if [ ! -e $$target_file ]; then \
 				ln -s $$file $$target_file; \
 				echo "Created symlink for $$file"; \
@@ -29,21 +30,22 @@ projection:
 			fi; \
 		done
 
-tree-projection:
+projection-tree:
 	@if [ -z "$(ARGS)" ]; then \
-		echo "Usage: make projection-tree <integration_name>"; \
+		echo "Usage: make projection-tree <integration_name> [skip=dir1,dir2,...]"; \
 		exit 1; \
 	fi
-	@mkdir -p $(PROJECTIONS_DIR)/$(ARGS)
-	@find $(PWD) -type f \( -name "*$(ARGS)*" -o -name "*$(shell echo $(ARGS) | sed 's/.*/\u&/')*" \) \
+	@mkdir -p $(PROJECTIONS_DIR)/$(word 1,$(ARGS))
+	@find $(PWD) -type f \( -name "*$(word 1,$(ARGS))*" -o -name "*$(shell echo $(word 1,$(ARGS)) | sed 's/.*/\u&/')*" \) \
 		-not -path "*/node_modules/*" \
 		-not -path "*/.git/*" \
 		-not -path "*/tmp/*" \
 		-not -path "*/log/*" \
 		-not -path "*/$(PROJECTIONS_DIR)/*" \
+		$(if $(skip),$(foreach dir,$(subst $(comma),$(space),$(skip)),-not -path "*/$(dir)/*")) \
 		| while read file; do \
 			rel_path=$${file#$(PWD)/}; \
-			target_dir=$(PROJECTIONS_DIR)/$(ARGS)/$$(dirname $$rel_path); \
+			target_dir=$(PROJECTIONS_DIR)/$(word 1,$(ARGS))/$$(dirname $$rel_path); \
 			mkdir -p $$target_dir; \
 			target_file=$$target_dir/$$(basename $$file); \
 			if [ ! -e $$target_file ]; then \
@@ -53,7 +55,6 @@ tree-projection:
 				echo "Symlink already exists for $$file"; \
 			fi; \
 		done
-
 
 clean-projection:
 	@if [ -z "$(ARGS)" ]; then \
@@ -101,17 +102,22 @@ clean-projection!:
 
 list-files:
 	@if [ -z "$(ARGS)" ]; then \
-		echo "Usage: make list-files <integration_name>"; \
+		echo "Usage: make list-files <integration_name> [skip=dir1,dir2,...]"; \
 		exit 1; \
 	fi
-	@echo "Files related to $(ARGS):"
-	@find . -type f \( -name "*$(ARGS)*" -o -name "*$(shell echo $(ARGS) | sed 's/.*/\u&/')*" \) \
+	@echo "Files related to $(word 1,$(ARGS)):"
+	@find . -type f \( -name "*$(word 1,$(ARGS))*" -o -name "*$(shell echo $(word 1,$(ARGS)) | sed 's/.*/\u&/')*" \) \
 		-not -path "*/node_modules/*" \
 		-not -path "*/.git/*" \
 		-not -path "*/tmp/*" \
 		-not -path "*/log/*" \
 		-not -path "*/$(PROJECTIONS_DIR)/*" \
+		$(if $(skip),$(foreach dir,$(subst $(comma),$(space),$(skip)),-not -path "*/$(dir)/*")) \
 		| sort
+
+# Helper variables for dealing with commas and spaces in skip parameter
+comma := ,
+space := $(empty) $(empty)
 
 open-projection:
 	open $(PROJECTIONS_DIR)/$(ARGS)
